@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import random
 
-from main import vae
+from src import vae
 
 def fix_seed(seed):
     random.seed(seed)
@@ -19,27 +19,51 @@ def calc_observable(model, W0=None, device="cpu"):
     latent_dim = model.dec.weight.size(1)
 
     if W0==None:
-        M = model.dec.weight.T@torch.ones(model.dec.weight.size(0), model.dec.weight.size(1), device=device)/input_dim
-        tM = model.mu.weight @ torch.ones(model.mu.weight.size(1), model.mu.weight.size(0), device=device)/input_dim
+        W0=torch.ones(model.dec.weight.size(0), model.dec.weight.size(1), device=device)
+        m = (model.dec.weight.T @ W0)/input_dim
+        d = (model.mu.weight @ W0)/input_dim
+
     else:
-        M = (model.dec.weight.T@W0)/input_dim
-        tM = (model.mu.weight@W0)/input_dim
+        m = (model.dec.weight.T @ W0)/input_dim
+        d = (model.mu.weight @ W0)/input_dim
 
     Q = (model.dec.weight.T @ model.dec.weight)/input_dim
-    tQ = (model.mu.weight @ model.mu.weight.T)/input_dim
+    E = (model.mu.weight @ model.mu.weight.T)/input_dim
     R = (model.dec.weight.T @ model.mu.weight.T)/input_dim
-    v = model.var
+    D = model.var
+
 
     if latent_dim==1:
-        m = M.flatten()[0]
-        tm=tM.flatten()[0]
-        q=Q.flatten()[0]
-        tq=tQ.flatten()[0]
-        r = R.flatten()[0]
-        eg = 1-(2*torch.abs(m))+q
-        ob_list = [m.item(), tm.item(), q.item(), tq.item(), r.item(), v.item(), eg.item()]
+
+        m = m.flatten()[0]
+        d = d.flatten()[0]
+        Q = Q.flatten()[0]
+        E = E.flatten()[0]
+        R = R.flatten()[0]
+        # Consider solutions with inversion symmetry
+        eg_order = 1-(2*torch.abs(m))+Q
+
+        ob_list = [
+                m.item(),
+                d.item(),
+                Q.item(),
+                E.item(),
+                R.item(),
+                D.item(),
+                eg_order.item()
+                ]
     else:
-        eg = 1-2*torch.sum(M)+torch.sum(Q)
-        ob_list = [M.flatten().tolist(), tM.flatten().tolist(), Q.flatten().tolist(), tQ.flatten().tolist(), R.flatten().tolist(), v.tolist(), eg.item()]
+        # Consider solutions with inversion symmetry
+        eg = 1-2*torch.abs(torch.sum(m))+torch.sum(q)
+
+        ob_list = [
+                m.flatten().tolist(),
+                d.flatten().tolist(),
+                Q.flatten().tolist(),
+                E.flatten().tolist(),
+                R.flatten().tolist(),
+                D.tolist(),
+                eg_order.item()
+                ]
 
     return ob_list
