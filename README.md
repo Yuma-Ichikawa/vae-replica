@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 ---
 
-## 📜 License
+## License
 This project is licensed under the **BSD 3-Clause License**. See [LICENSE](LICENSE.txt) for details.
 
 ---
